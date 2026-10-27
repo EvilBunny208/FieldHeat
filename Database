@@ -1,0 +1,18 @@
+-- FieldHeat Supabase schema
+-- Run in the Supabase SQL Editor.
+
+create table readings (
+  id bigint generated always as identity primary key,
+  created_at timestamptz default now(),
+  device_id text,
+  ta real,  -- air temperature, C
+  rh real,  -- relative humidity, %
+  tg real   -- black globe temperature, C
+);
+
+alter table readings enable row level security;
+
+-- Prototype policies: the sensor inserts readings and the web app reads them
+-- with the public anon key. Version 2.0 would use per-device keys.
+create policy "device insert" on readings for insert to anon with check (true);
+create policy "public read" on readings for select to anon using (true);
