@@ -1,0 +1,104 @@
+// FieldHeat sensor firmware
+// ESP32-S3 + SHT31/SHT45 (air temp and humidity) + DS18B20 in a 4" black globe.
+// Reads all three values once a minute and posts raw readings to Supabase.
+// Heat-stress (WBGT) math runs in the web app, so formulas can change without reflashing.
+
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
+#include <Wire.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+#define USE_SHT31 1  // set to 0 for an SHT40/41/45
+
+#if USE_SHT31
+  #include <Adafruit_SHT31.h>
+  Adafruit_SHT31 sht = Adafruit_SHT31();
+#else
+  #include <Adafruit_SHT4x.h>
+  Adafruit_SHT4x sht = Adafruit_SHT4x();
+#endif
+
+// ---- Settings (fill in locally; never commit real values) ----
+const char* WIFI_SSID    = "YOUR_WIFI";
+const char* WIFI_PASS    = "YOUR_PASSWORD";
+const char* SUPABASE_URL = "https://YOUR_PROJECT.supabase.co/rest/v1/readings";
+const char* SUPABASE_KEY = "YOUR_ANON_KEY";
+const char* DEVICE_ID    = "field-1";
+
+const int SDA_PIN = 8, SCL_PIN = 9, ONEWIRE_PIN = 4;
+const unsigned long INTERVAL_MS = 60000;
+
+OneWire oneWire(ONEWIRE_PIN);
+DallasTemperature globe(&oneWire);
+unsigned long lastSend = 0;
+bool firstRun = true;
+
+void connectWiFi() {
+  if (WiFi.status() == WL_CONNECTED) return;
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) delay(250);
+}
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin(SDA_PIN, SCL_PIN);
+#if USE_SHT31
+  if (!sht.begin(0x44)) Serial.println("SHT31 not found");
+#else
+  if (!sht.begin()) Serial.println("SHT4x not found");
+  sht.setPrecision(SHT4X_HIGH_PRECISION);
+  sht.setHeater(SHT4X_NO_HEATER);
+#endif
+  globe.begin();
+  globe.setResolution(12);
+  WiFi.mode(WIFI_STA);
+  connectWiFi();
+}
+
+void loop() {
+  if (!firstRun && millis() - lastSend < INTERVAL_MS) return;
+  firstRun = false;
+  lastSend = millis();
+
+  float ta, rh;
+#if USE_SHT31
+  ta = sht.readTemperature();
+  rh = sht.readHumidity();
+#else
+  sensors_event_t hum, temp;
+  sht.getEvent(&hum, &temp);
+  ta = temp.temperature;
+  rh = hum.relative_humidity;
+#endif
+  globe.requestTemperatures();
+  float tg = globe.getTempCByIndex(0);
+
+  if (isnan(ta) || isnan(rh) || tg == DEVICE_DISCONNECTED_C) {
+    Serial.println("Sensor read failed");
+    return;
+  }
+  Serial.printf("Ta=%.2f C  RH=%.1f %%  Tg=%.2f C\n", ta, rh, tg);
+
+  connectWiFi();
+  if (WiFi.status() != WL_CONNECTED) { Serial.println("No WiFi"); return; }
+
+  WiFiClientSecure client;
+  client.setInsecure();  // prototype only
+  HTTPClient http;
+  http.begin(client, SUPABASE_URL);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("apikey", SUPABASE_KEY);
+  http.addHeader("Authorization", String("Bearer ") + SUPABASE_KEY);
+  http.addHeader("Prefer", "return=minimal");
+
+  String body = String("{\"device_id\":\"") + DEVICE_ID +
+                "\",\"ta\":" + String(ta, 2) +
+                ",\"rh\":" + String(rh, 1) +
+                ",\"tg\":" + String(tg, 2) + "}";
+  int code = http.POST(body);
+  Serial.printf("POST %d\n", code);  // 201 = saved
+  http.end();
+}
