@@ -1,0 +1,59 @@
+"""FieldHeat heat-stress math.
+
+Converts raw sensor readings (air temperature, humidity, 4-inch black globe
+temperature) into outdoor Wet Bulb Globe Temperature (WBGT):
+
+    WBGT = 0.7 * Tnwb + 0.2 * Tg + 0.1 * Ta
+
+- Wet bulb: Stull (2011) formula from air temperature and humidity.
+- Globe size: ISO 7726 mean radiant temperature, used to convert the 4-inch
+  globe reading to what a standard 6-inch globe would read.
+
+The web app (web/index.html) uses the same formulas in JavaScript.
+"""
+import math
+
+
+def wet_bulb_stull(ta, rh):
+    """ta in degrees C, rh in percent. Returns psychrometric wet bulb, C."""
+    return (ta * math.atan(0.151977 * math.sqrt(rh + 8.313659))
+            + math.atan(ta + rh) - math.atan(rh - 1.676331)
+            + 0.00391838 * rh**1.5 * math.atan(0.023101 * rh)
+            - 4.686035)
+
+
+def mean_radiant_temp(tg, ta, wind, d, eps=0.95):
+    """ISO 7726 forced convection. d = globe diameter (m), wind in m/s."""
+    wind = max(wind, 0.1)
+    return ((tg + 273.15)**4
+            + 1.1e8 * wind**0.6 / (eps * d**0.4) * (tg - ta))**0.25 - 273.15
+
+
+def globe_equivalent(tg, ta, wind, d_from=0.1016, d_to=0.150):
+    """Convert a 4-inch globe reading to a standard 6-inch globe reading."""
+    target = mean_radiant_temp(tg, ta, wind, d_from)
+    lo, hi = ta - 20, ta + 60
+    for _ in range(60):  # bisection
+        mid = (lo + hi) / 2
+        if mean_radiant_temp(mid, ta, wind, d_to) < target:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
+
+def wbgt_outdoor(ta, rh, tg, wind):
+    """Outdoor WBGT in degrees C from raw sensor readings."""
+    tg6 = globe_equivalent(tg, ta, wind)
+    tw = wet_bulb_stull(ta, rh)
+    return 0.7 * tw + 0.2 * tg6 + 0.1 * ta
+
+
+def c_to_f(c):
+    return c * 9 / 5 + 32
+
+
+if __name__ == "__main__":
+    # Example: 32 C air, 60% humidity, 45 C globe, 1.5 m/s wind
+    w = wbgt_outdoor(32, 60, 45, 1.5)
+    print(f"WBGT = {w:.1f} C = {c_to_f(w):.1f} F")
