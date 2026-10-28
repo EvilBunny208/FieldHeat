@@ -90,5 +90,7 @@ Circuit Pictures:
 <img width="4284" height="5712" alt="IMG_0094" src="https://github.com/user-attachments/assets/0af00b2f-64ce-40a6-a178-6794ab5b5adf" />
 <img width="3024" height="4032" alt="IMG_0091" src="https://github.com/user-attachments/assets/8265ecbc-9d5b-4cf8-946c-b59cbc04fedc" />
 
-App Pictures:
-[FieldHeat.pdf](https://github.com/user-attachments/files/34052996/FieldHeat.pdf)
+App Images:
+<img width="384" height="827" alt="Screenshot 2026-10-27 201940" src="https://github.com/user-attachments/assets/dce198a3-1e74-4bb5-a7ef-7fb4dbcf56b9" />
+<img width="373" height="582" alt="Screenshot 2026-10-27 201955" src="https://github.com/user-attachments/assets/b1c75c94-4d84-4d28-a0e0-84c23c48e8a3" />
+<img width="397" height="585" alt="Screenshot 2026-10-27 201949" src="https://github.com/user-attachments/assets/adc59ad5-75db-4b30-be6a-a6f0d6adec49" />
