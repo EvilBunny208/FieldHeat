@@ -84,3 +84,11 @@ C++ (Arduino), JavaScript, HTML/CSS, Python, SQL. Supabase, Open-Meteo, Arduino 
 ## Safety note
 
 FieldHeat doesn't replace a school's certified WBGT device or its athletic trainer. Use it alongside them.
+
+Circuit Pictures:
+<img width="3024" height="4032" alt="IMG_0110" src="https://github.com/user-attachments/assets/feb5643c-84ef-4658-a4b2-aa1212d7926e" />
+<img width="4284" height="5712" alt="IMG_0094" src="https://github.com/user-attachments/assets/0af00b2f-64ce-40a6-a178-6794ab5b5adf" />
+<img width="3024" height="4032" alt="IMG_0091" src="https://github.com/user-attachments/assets/8265ecbc-9d5b-4cf8-946c-b59cbc04fedc" />
+
+App Pictures:
+[FieldHeat.pdf](https://github.com/user-attachments/files/34052996/FieldHeat.pdf)
